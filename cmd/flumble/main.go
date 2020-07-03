@@ -52,9 +52,6 @@ func main() {
 	config.Gumble.AttachAudio(util.AudioListener{
 		AudioStream: func(e *gumble.AudioStreamEvent) {
 			log.Debugw("AudioStream", "user", e.User.Name, "audiointerval", e.Client.Config.AudioInterval)
-			if e.User.Name == config.IgnoreUsername {
-				return
-			}
 
 			// start a gofunc listening for audio packets
 			go func() {
@@ -66,9 +63,11 @@ func main() {
 					case audioPkt, more := <-e.C:
 						if !talking {
 							log.Debugw("start talking", "user", e.User.Name, "len", len(audioPkt.AudioBuffer))
-							err = flrigClient.Call("rig.set_ptt", 1, nil)
-							if err != nil {
-								log.Error(err)
+							if e.User.Name != config.IgnoreUsername {
+								err = flrigClient.Call("rig.set_ptt", 1, nil)
+								if err != nil {
+									log.Error(err)
+								}
 							}
 						}
 						talking = true
@@ -77,10 +76,13 @@ func main() {
 
 					case <-time.After(config.AudioTimeout):
 						if talking {
+
 							log.Debugw("stop talking", "user", e.User.Name, "timeSinceLast", time.Now().Sub(lastPkt).Seconds())
-							err = flrigClient.Call("rig.set_ptt", 0, nil)
-							if err != nil {
-								log.Error(err)
+							if e.User.Name != config.IgnoreUsername {
+								err = flrigClient.Call("rig.set_ptt", 0, nil)
+								if err != nil {
+									log.Error(err)
+								}
 							}
 						}
 						talking = false

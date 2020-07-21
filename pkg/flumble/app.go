@@ -29,7 +29,7 @@ func (a *App) HandleAudioStream(e *gumble.AudioStreamEvent) {
 	inhibit := false
 
 	startTalkingTime := time.Now()
-	lastPkt := time.Now()
+	var lastPkt time.Time
 
 	for {
 		select {
@@ -40,7 +40,12 @@ func (a *App) HandleAudioStream(e *gumble.AudioStreamEvent) {
 					a.log.Debugw("audio detected but tx inhibited", "talkTime", time.Now().Sub(startTalkingTime))
 				} else {
 					a.log.Debugw("started talking", "user", e.User.Name, "len", len(audioPkt.AudioBuffer))
-					startTalkingTime = time.Now()
+
+					// only update start talking time if has been silent for the minimum timeframe
+					if time.Now().Sub(lastPkt) > a.config.MinSilenceTime {
+						startTalkingTime = time.Now()
+					}
+
 					if e.User.Name != a.config.IgnoreUsername {
 						err := a.flrigClient.Call("rig.set_ptt", 1, nil)
 						if err != nil {

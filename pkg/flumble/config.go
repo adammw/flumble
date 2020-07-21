@@ -17,6 +17,8 @@ type Config struct {
 	MumbleTlsConfig tls.Config
 	IgnoreUsername	string
 	AudioTimeout    time.Duration
+	MaxTransmitTime time.Duration
+	MinSilenceTime  time.Duration
 }
 
 func BuildConfig() (*Config, error) {
@@ -29,6 +31,8 @@ func BuildConfig() (*Config, error) {
 	flag.StringVar(&config.Gumble.Password, "password", "", "client password")
 	flag.StringVar(&config.IgnoreUsername, "ignore-user", "Radiopi", "username of radio to ignore")
 	flag.DurationVar(&config.AudioTimeout, "audio-timeout", 250*time.Millisecond, "timeout to consider stopped talking")
+	flag.DurationVar(&config.MaxTransmitTime, "max-transmit-time", 10*time.Minute, "maximum continuous transmission time")
+	flag.DurationVar(&config.MinSilenceTime, "min-silence-time", 30*time.Second, "minimum continuous silence time after maximum transmit time hit")
 
 	insecure := flag.Bool("insecure", false, "skip server certificate verification")
 	certificateFile := flag.String("certificate", "", "user certificate file (PEM)")

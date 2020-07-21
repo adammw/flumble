@@ -10,7 +10,6 @@ import (
 	"layeh.com/gumble/gumbleutil"
 	"log"
 	"net"
-	"time"
 
 	_ "layeh.com/gumble/opus" // imported to enable opus audio codec
 )
@@ -43,6 +42,8 @@ func main() {
 
 	keepAlive := make(chan bool)
 
+	app := flumble.NewApp(config, logger, flrigClient)
+
 	config.Gumble.Attach(gumbleutil.AutoBitrate)
 	config.Gumble.Attach(gumbleutil.Listener{
 		Disconnect: func(e *gumble.DisconnectEvent) {
@@ -51,48 +52,8 @@ func main() {
 	})
 	config.Gumble.AttachAudio(util.AudioListener{
 		AudioStream: func(e *gumble.AudioStreamEvent) {
-			log.Debugw("AudioStream", "user", e.User.Name, "audiointerval", e.Client.Config.AudioInterval)
-
 			// start a gofunc listening for audio packets
-			go func() {
-				talking := false
-				closed := false
-				lastPkt := time.Now()
-				for {
-					select {
-					case audioPkt, more := <-e.C:
-						if !talking {
-							log.Debugw("start talking", "user", e.User.Name, "len", len(audioPkt.AudioBuffer))
-							if e.User.Name != config.IgnoreUsername {
-								err = flrigClient.Call("rig.set_ptt", 1, nil)
-								if err != nil {
-									log.Error(err)
-								}
-							}
-						}
-						talking = true
-						closed = !more // handle closed audio channel
-						lastPkt = time.Now()
-
-					case <-time.After(config.AudioTimeout):
-						if talking {
-
-							log.Debugw("stop talking", "user", e.User.Name, "timeSinceLast", time.Now().Sub(lastPkt).Seconds())
-							if e.User.Name != config.IgnoreUsername {
-								err = flrigClient.Call("rig.set_ptt", 0, nil)
-								if err != nil {
-									log.Error(err)
-								}
-							}
-						}
-						talking = false
-
-						if (closed) {
-							break;
-						}
-					}
-				}
-			}()
+			go app.HandleAudioStream(e)
 		},
 	})
 

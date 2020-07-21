@@ -60,7 +60,7 @@ func (a *App) HandleAudioStream(e *gumble.AudioStreamEvent) {
 			lastPkt = time.Now()
 
 			// check for exceeding maximum transmission time
-			if time.Now().Sub(startTalkingTime) > a.config.MaxTransmitTime {
+			if !inhibit && time.Now().Sub(startTalkingTime) > a.config.MaxTransmitTime {
 				a.log.Debugw("maximum transmission time exceeded", "talkTime", time.Now().Sub(startTalkingTime))
 				inhibit = true
 
